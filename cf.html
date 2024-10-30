@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Client Interface</title>
+</head>
+<body>
+<h1>Client Interface</h1>
+<div id="loginForm">
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
+<div id="eventStatus"></div>
+<div id="eventNotifications"></div>
+<div id="votingSection" style="display: none;">
+    <p>Enter your vote (0-5):</p>
+    <input type="number" id="voteInput" min="0" max="5">
+    <button onclick="sendVote()">Vote</button>
+</div>
+<div id="finalScores" style="display: none;">
+    <h2>Final Scores</h2>
+    <pre id="scoreDetails"></pre>
+</div>
+
+<script>
+const ws = new WebSocket('ws://ec2-3-208-23-60.compute-1.amazonaws.com:6789');
+let voteTimeout;
+
+ws.onopen = () => {
+    console.log('Connected to server');
+};
+
+ws.onmessage = (event) => {
+    console.log('Message from server:', event.data);
+    const message = JSON.parse(event.data);
+
+    if (message.type === 'welcome') {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('eventNotifications').innerText = 'Logged in successfully!';
+    } else if (message.type === 'event') {
+        document.getElementById('eventNotifications').innerText = message.details;
+    } else if (message.type === 'event_ended') {
+        document.getElementById('eventNotifications').innerText = message.details;
+        if (message.details.includes('Please vote')) {
+            document.getElementById('votingSection').style.display = 'block';
+            startVotingTimer();
+        }
+    } else if (message.type === 'voteResult') {
+        document.getElementById('eventNotifications').innerText = message.result;
+        document.getElementById('votingSection').style.display = 'none';
+        clearTimeout(voteTimeout);
+    } else if (message.type === 'final_message') {
+        document.getElementById('eventNotifications').innerText = message.message;
+        document.getElementById('scoreDetails').innerText = JSON.stringify(message.final_scores, null, 2);
+        document.getElementById('finalScores').style.display = 'block';
+        clearTimeout(voteTimeout);
+    }
+};
+
+function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    ws.send(JSON.stringify({ action: 'login', username: username, password: password }));
+}
+
+function sendVote() {
+    const vote = document.getElementById('voteInput').value;
+    ws.send(JSON.stringify({ action: 'vote', vote: vote }));
+    document.getElementById('votingSection').style.display = 'none';
+    clearTimeout(voteTimeout);
+}
+
+function startVotingTimer() {
+    voteTimeout = setTimeout(function() {
+        document.getElementById('eventNotifications').innerText = 'Vote timed out, given 0 score.';
+        document.getElementById('votingSection').style.display = 'none';
+        ws.send(JSON.stringify({ action: 'vote', vote: 0 }));
+    }, 10000);  // 10 seconds timeout
+}
+</script>
+</body>
+</html>

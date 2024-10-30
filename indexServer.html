@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Dashboard</title>
+</head>
+<body>
+    <h1>Event Control Panel</h1>
+    <button onclick="startEvent()">Start Event</button>
+    <button onclick="endEvent()">End Event</button>
+    <div id="messages"></div>
+
+    <script>
+        const ws = new WebSocket('ws://ec2-3-208-23-60.compute-1.amazonaws.com:6790');
+        ws.onmessage = function(event) {
+            document.getElementById('messages').innerHTML += '<p>' + event.data + '</p>';
+        };
+
+        function startEvent() {
+            ws.send(JSON.stringify({ action: 'start' }));
+        }
+
+        function endEvent() {
+            ws.send(JSON.stringify({ action: 'stop' }));
+        }
+    </script>
+</body>
+</html>
