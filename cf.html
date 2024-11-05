@@ -13,11 +13,33 @@
 </div>
 <div id="eventStatus"></div>
 <div id="eventNotifications"></div>
+
+<!-- Voting section for all five performances -->
 <div id="votingSection" style="display: none;">
-    <p>Enter your vote (0-5):</p>
-    <input type="number" id="voteInput" min="0" max="5">
-    <button onclick="sendVote()">Vote</button>
+    <h2>Vote for Performances</h2>
+    <div id="performance1" class="performance-vote">
+        <p>Performance 1: Enter your vote (0-5):</p>
+        <input type="number" id="voteInput1" min="0" max="5">
+    </div>
+    <div id="performance2" class="performance-vote">
+        <p>Performance 2: Enter your vote (0-5):</p>
+        <input type="number" id="voteInput2" min="0" max="5">
+    </div>
+    <div id="performance3" class="performance-vote">
+        <p>Performance 3: Enter your vote (0-5):</p>
+        <input type="number" id="voteInput3" min="0" max="5">
+    </div>
+    <div id="performance4" class="performance-vote">
+        <p>Performance 4: Enter your vote (0-5):</p>
+        <input type="number" id="voteInput4" min="0" max="5">
+    </div>
+    <div id="performance5" class="performance-vote">
+        <p>Performance 5: Enter your vote (0-5):</p>
+        <input type="number" id="voteInput5" min="0" max="5">
+    </div>
+    <button onclick="sendVotes()">Submit Votes</button>
 </div>
+
 <div id="finalScores" style="display: none;">
     <h2>Final Scores</h2>
     <pre id="scoreDetails"></pre>
@@ -42,10 +64,8 @@ ws.onmessage = (event) => {
         document.getElementById('eventNotifications').innerText = message.details;
     } else if (message.type === 'event_ended') {
         document.getElementById('eventNotifications').innerText = message.details;
-        if (message.details.includes('Please vote')) {
-            document.getElementById('votingSection').style.display = 'block';
-            startVotingTimer();
-        }
+        document.getElementById('votingSection').style.display = 'block';
+        startVotingTimer();
     } else if (message.type === 'voteResult') {
         document.getElementById('eventNotifications').innerText = message.result;
         document.getElementById('votingSection').style.display = 'none';
@@ -64,19 +84,30 @@ function login() {
     ws.send(JSON.stringify({ action: 'login', username: username, password: password }));
 }
 
-function sendVote() {
-    const vote = document.getElementById('voteInput').value;
-    ws.send(JSON.stringify({ action: 'vote', vote: vote }));
+function sendVotes() {
+    const votes = getVotes();
+    ws.send(JSON.stringify({ action: 'vote', ...votes }));
     document.getElementById('votingSection').style.display = 'none';
     clearTimeout(voteTimeout);
 }
 
+function getVotes() {
+    return {
+        vote1: document.getElementById('voteInput1').value || 0,
+        vote2: document.getElementById('voteInput2').value || 0,
+        vote3: document.getElementById('voteInput3').value || 0,
+        vote4: document.getElementById('voteInput4').value || 0,
+        vote5: document.getElementById('voteInput5').value || 0,
+    };
+}
+
 function startVotingTimer() {
     voteTimeout = setTimeout(function() {
-        document.getElementById('eventNotifications').innerText = 'Vote timed out, given 0 score.';
+        document.getElementById('eventNotifications').innerText = 'Vote timed out. Sending available scores.';
+        const votes = getVotes();
+        ws.send(JSON.stringify({ action: 'vote', ...votes }));
         document.getElementById('votingSection').style.display = 'none';
-        ws.send(JSON.stringify({ action: 'vote', vote: 0 }));
-    }, 10000);  // 10 seconds timeout
+    }, 30000);  // 30 seconds timeout
 }
 </script>
 </body>
